@@ -72,7 +72,7 @@ const (
 //
 // Multi-tenant Distribution Requirements:
 // - DistributionConfig.ConnectionMode is automatically set to "tenant-only"
-// - DistributionConfig.TenantConfig must be specified (contains parameter definitions)
+// - DistributionConfig.TenantConfig is optional (can be empty or omitted)
 // - DistributionConfig.WebACLId must be a WAF V2 web ACL if specified
 func newMultiTenantDistributionResource(_ context.Context) (resource.ResourceWithConfigure, error) {
 	r := &multiTenantDistributionResource{}
@@ -596,7 +596,6 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 			"tenant_config": schema.ListNestedBlock{
 				CustomType: fwtypes.NewListNestedObjectTypeOf[tenantConfigModel](ctx),
 				Validators: []validator.List{
-					listvalidator.IsRequired(),
 					listvalidator.SizeAtMost(1),
 				},
 				NestedObject: schema.NestedBlockObject{

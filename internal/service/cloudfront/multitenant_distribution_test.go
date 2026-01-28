@@ -274,6 +274,37 @@ func TestAccCloudFrontMultiTenantDistribution_update(t *testing.T) {
 	})
 }
 
+func TestAccCloudFrontMultiTenantDistribution_optionalTenantConfig(t *testing.T) {
+	t.Parallel()
+
+	ctx := acctest.Context(t)
+	var distribution awstypes.Distribution
+	resourceName := "aws_cloudfront_multitenant_distribution.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(ctx, t); acctest.PreCheckPartitionHasService(t, names.CloudFrontEndpointID) },
+		ErrorCheck:               acctest.ErrorCheck(t, names.CloudFrontServiceID),
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories,
+		CheckDestroy:             testAccCheckMultiTenantDistributionDestroy(ctx),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccMultiTenantDistributionConfig_noTenantConfig(),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckMultiTenantDistributionExists(ctx, resourceName, &distribution),
+					resource.TestCheckResourceAttr(resourceName, names.AttrEnabled, acctest.CtFalse),
+					resource.TestCheckResourceAttr(resourceName, "tenant_config.#", "0"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"etag"},
+			},
+		},
+	})
+}
+
 func TestAccCloudFrontMultiTenantDistribution_multipleCustomHeaders(t *testing.T) {
 	t.Parallel()
 
@@ -968,6 +999,50 @@ resource "aws_cloudfront_multitenant_distribution" "test" {
       }
     }
   }
+}
+`
+}
+
+func testAccMultiTenantDistributionConfig_noTenantConfig() string {
+	return `
+resource "aws_cloudfront_multitenant_distribution" "test" {
+  enabled = false
+  comment = "Test distribution with no tenant config"
+
+  origin {
+    domain_name = "example.com"
+    id          = "test-origin"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "test-origin"
+    viewer_protocol_policy = "redirect-to-https"
+    cache_policy_id        = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+
+    allowed_methods {
+      items          = ["GET", "HEAD"]
+      cached_methods = ["GET", "HEAD"]
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  # No tenant_config block at all - testing it's truly optional
 }
 `
 }
