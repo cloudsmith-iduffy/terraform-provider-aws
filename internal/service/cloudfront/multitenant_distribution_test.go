@@ -305,6 +305,180 @@ func TestAccCloudFrontMultiTenantDistribution_optionalTenantConfig(t *testing.T)
 	})
 }
 
+func TestAccCloudFrontMultiTenantDistribution_enabled(t *testing.T) {
+	t.Parallel()
+
+	ctx := acctest.Context(t)
+	var distribution awstypes.Distribution
+	resourceName := "aws_cloudfront_multitenant_distribution.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(ctx, t); acctest.PreCheckPartitionHasService(t, names.CloudFrontEndpointID) },
+		ErrorCheck:               acctest.ErrorCheck(t, names.CloudFrontServiceID),
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories,
+		CheckDestroy:             testAccCheckMultiTenantDistributionDestroy(ctx),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccMultiTenantDistributionConfig_enabled(false),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckMultiTenantDistributionExists(ctx, resourceName, &distribution),
+					resource.TestCheckResourceAttr(resourceName, names.AttrEnabled, acctest.CtFalse),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"etag"},
+			},
+			{
+				Config: testAccMultiTenantDistributionConfig_enabled(true),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckMultiTenantDistributionExists(ctx, resourceName, &distribution),
+					resource.TestCheckResourceAttr(resourceName, names.AttrEnabled, acctest.CtTrue),
+				),
+			},
+		},
+	})
+}
+
+func TestAccCloudFrontMultiTenantDistribution_originGroups(t *testing.T) {
+	t.Parallel()
+
+	ctx := acctest.Context(t)
+	var distribution awstypes.Distribution
+	resourceName := "aws_cloudfront_multitenant_distribution.test"
+	rName := acctest.RandomWithPrefix(t, acctest.ResourcePrefix)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(ctx, t); acctest.PreCheckPartitionHasService(t, names.CloudFrontEndpointID) },
+		ErrorCheck:               acctest.ErrorCheck(t, names.CloudFrontServiceID),
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories,
+		CheckDestroy:             testAccCheckMultiTenantDistributionDestroy(ctx),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccMultiTenantDistributionConfig_originGroups(rName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckMultiTenantDistributionExists(ctx, resourceName, &distribution),
+					resource.TestCheckResourceAttr(resourceName, "origin_group.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "origin_group.0.member.#", "2"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"etag"},
+			},
+		},
+	})
+}
+
+func TestAccCloudFrontMultiTenantDistribution_originShield(t *testing.T) {
+	t.Parallel()
+
+	ctx := acctest.Context(t)
+	var distribution awstypes.Distribution
+	resourceName := "aws_cloudfront_multitenant_distribution.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(ctx, t); acctest.PreCheckPartitionHasService(t, names.CloudFrontEndpointID) },
+		ErrorCheck:               acctest.ErrorCheck(t, names.CloudFrontServiceID),
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories,
+		CheckDestroy:             testAccCheckMultiTenantDistributionDestroy(ctx),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccMultiTenantDistributionConfig_originShield(true),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckMultiTenantDistributionExists(ctx, resourceName, &distribution),
+					resource.TestCheckResourceAttr(resourceName, "origin.0.origin_shield.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "origin.0.origin_shield.0.enabled", acctest.CtTrue),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"etag"},
+			},
+		},
+	})
+}
+
+func TestAccCloudFrontMultiTenantDistribution_httpVersion(t *testing.T) {
+	t.Parallel()
+
+	ctx := acctest.Context(t)
+	var distribution awstypes.Distribution
+	resourceName := "aws_cloudfront_multitenant_distribution.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(ctx, t); acctest.PreCheckPartitionHasService(t, names.CloudFrontEndpointID) },
+		ErrorCheck:               acctest.ErrorCheck(t, names.CloudFrontServiceID),
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories,
+		CheckDestroy:             testAccCheckMultiTenantDistributionDestroy(ctx),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccMultiTenantDistributionConfig_httpVersion("http2"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckMultiTenantDistributionExists(ctx, resourceName, &distribution),
+					resource.TestCheckResourceAttr(resourceName, "http_version", "http2"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"etag"},
+			},
+			{
+				Config: testAccMultiTenantDistributionConfig_httpVersion("http3"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckMultiTenantDistributionExists(ctx, resourceName, &distribution),
+					resource.TestCheckResourceAttr(resourceName, "http_version", "http3"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccCloudFrontMultiTenantDistribution_responseCompletionTimeout(t *testing.T) {
+	t.Parallel()
+
+	ctx := acctest.Context(t)
+	var distribution awstypes.Distribution
+	resourceName := "aws_cloudfront_multitenant_distribution.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(ctx, t); acctest.PreCheckPartitionHasService(t, names.CloudFrontEndpointID) },
+		ErrorCheck:               acctest.ErrorCheck(t, names.CloudFrontServiceID),
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories,
+		CheckDestroy:             testAccCheckMultiTenantDistributionDestroy(ctx),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccMultiTenantDistributionConfig_responseCompletionTimeout(10),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckMultiTenantDistributionExists(ctx, resourceName, &distribution),
+					resource.TestCheckResourceAttr(resourceName, "origin.0.response_completion_timeout", "10"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"etag"},
+			},
+			{
+				Config: testAccMultiTenantDistributionConfig_responseCompletionTimeout(60),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckMultiTenantDistributionExists(ctx, resourceName, &distribution),
+					resource.TestCheckResourceAttr(resourceName, "origin.0.response_completion_timeout", "60"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccCloudFrontMultiTenantDistribution_multipleCustomHeaders(t *testing.T) {
 	t.Parallel()
 
@@ -1045,4 +1219,305 @@ resource "aws_cloudfront_multitenant_distribution" "test" {
   # No tenant_config block at all - testing it's truly optional
 }
 `
+}
+
+func testAccMultiTenantDistributionConfig_enabled(enabled bool) string {
+	return fmt.Sprintf(`
+resource "aws_cloudfront_multitenant_distribution" "test" {
+  enabled = %[1]t
+  comment = "Test distribution enabled toggle"
+
+  origin {
+    domain_name = "example.com"
+    id          = "test-origin"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "test-origin"
+    viewer_protocol_policy = "redirect-to-https"
+    cache_policy_id        = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+
+    allowed_methods {
+      items          = ["GET", "HEAD"]
+      cached_methods = ["GET", "HEAD"]
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  tenant_config {
+    parameter_definition {
+      name = "origin_domain"
+      definition {
+        string_schema {
+          required = true
+          comment  = "Origin domain parameter"
+        }
+      }
+    }
+  }
+}
+`, enabled)
+}
+
+func testAccMultiTenantDistributionConfig_originGroups(rName string) string {
+	return fmt.Sprintf(`
+resource "aws_s3_bucket" "test1" {
+  bucket        = "%[1]s-1"
+  force_destroy = true
+}
+
+resource "aws_s3_bucket" "test2" {
+  bucket        = "%[1]s-2"
+  force_destroy = true
+}
+
+resource "aws_cloudfront_multitenant_distribution" "test" {
+  enabled = false
+  comment = "Test distribution with origin groups"
+
+  origin {
+    domain_name = aws_s3_bucket.test1.bucket_regional_domain_name
+    id          = "primary"
+  }
+
+  origin {
+    domain_name = aws_s3_bucket.test2.bucket_regional_domain_name
+    id          = "secondary"
+  }
+
+  origin_group {
+    id = "group1"
+
+    failover_criteria {
+      status_codes = [403, 404, 500, 502, 503, 504]
+    }
+
+    member {
+      origin_id = "primary"
+    }
+
+    member {
+      origin_id = "secondary"
+    }
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "group1"
+    viewer_protocol_policy = "redirect-to-https"
+    cache_policy_id        = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+
+    allowed_methods {
+      items          = ["GET", "HEAD"]
+      cached_methods = ["GET", "HEAD"]
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  tenant_config {
+    parameter_definition {
+      name = "origin_domain"
+      definition {
+        string_schema {
+          required = true
+          comment  = "Origin domain parameter"
+        }
+      }
+    }
+  }
+}
+`, rName)
+}
+
+func testAccMultiTenantDistributionConfig_originShield(enabled bool) string {
+	return fmt.Sprintf(`
+resource "aws_cloudfront_multitenant_distribution" "test" {
+  enabled = false
+  comment = "Test distribution with origin shield"
+
+  origin {
+    domain_name = "example.com"
+    id          = "test-origin"
+
+    origin_shield {
+      enabled              = %[1]t
+      origin_shield_region = "us-east-1"
+    }
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "test-origin"
+    viewer_protocol_policy = "redirect-to-https"
+    cache_policy_id        = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+
+    allowed_methods {
+      items          = ["GET", "HEAD"]
+      cached_methods = ["GET", "HEAD"]
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  tenant_config {
+    parameter_definition {
+      name = "origin_domain"
+      definition {
+        string_schema {
+          required = true
+          comment  = "Origin domain parameter"
+        }
+      }
+    }
+  }
+}
+`, enabled)
+}
+
+func testAccMultiTenantDistributionConfig_httpVersion(version string) string {
+	return fmt.Sprintf(`
+resource "aws_cloudfront_multitenant_distribution" "test" {
+  enabled      = false
+  comment      = "Test distribution with HTTP version"
+  http_version = %[1]q
+
+  origin {
+    domain_name = "example.com"
+    id          = "test-origin"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "test-origin"
+    viewer_protocol_policy = "redirect-to-https"
+    cache_policy_id        = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+
+    allowed_methods {
+      items          = ["GET", "HEAD"]
+      cached_methods = ["GET", "HEAD"]
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  tenant_config {
+    parameter_definition {
+      name = "origin_domain"
+      definition {
+        string_schema {
+          required = true
+          comment  = "Origin domain parameter"
+        }
+      }
+    }
+  }
+}
+`, version)
+}
+
+func testAccMultiTenantDistributionConfig_responseCompletionTimeout(timeout int) string {
+	return fmt.Sprintf(`
+resource "aws_cloudfront_multitenant_distribution" "test" {
+  enabled = false
+  comment = "Test distribution with response completion timeout"
+
+  origin {
+    domain_name                = "example.com"
+    id                         = "test-origin"
+    response_completion_timeout = %[1]d
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "test-origin"
+    viewer_protocol_policy = "redirect-to-https"
+    cache_policy_id        = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+
+    allowed_methods {
+      items          = ["GET", "HEAD"]
+      cached_methods = ["GET", "HEAD"]
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  tenant_config {
+    parameter_definition {
+      name = "origin_domain"
+      definition {
+        string_schema {
+          required = true
+          comment  = "Origin domain parameter"
+        }
+      }
+    }
+  }
+}
+`, timeout)
 }
