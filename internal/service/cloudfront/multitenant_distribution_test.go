@@ -274,6 +274,39 @@ func TestAccCloudFrontMultiTenantDistribution_update(t *testing.T) {
 	})
 }
 
+func TestAccCloudFrontMultiTenantDistribution_multipleCustomHeaders(t *testing.T) {
+	t.Parallel()
+
+	ctx := acctest.Context(t)
+	var distribution awstypes.Distribution
+	resourceName := "aws_cloudfront_multitenant_distribution.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(ctx, t); acctest.PreCheckPartitionHasService(t, names.CloudFrontEndpointID) },
+		ErrorCheck:               acctest.ErrorCheck(t, names.CloudFrontServiceID),
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories,
+		CheckDestroy:             testAccCheckMultiTenantDistributionDestroy(ctx),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccMultiTenantDistributionConfig_multipleCustomHeaders(),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckMultiTenantDistributionExists(ctx, resourceName, &distribution),
+					resource.TestCheckResourceAttr(resourceName, names.AttrEnabled, acctest.CtFalse),
+					resource.TestCheckResourceAttr(resourceName, "origin.#", "1"),
+					// Verify we have 3 custom headers (order doesn't matter with sets)
+					resource.TestCheckResourceAttr(resourceName, "origin.0.custom_header.#", "3"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"etag"},
+			},
+		},
+	})
+}
+
 func testAccCheckMultiTenantDistributionDestroy(ctx context.Context) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		conn := acctest.Provider.Meta().(*conns.AWSClient).CloudFrontClient(ctx)
@@ -651,4 +684,74 @@ resource "aws_cloudfront_multitenant_distribution" "test" {
   }
 }
 `, rName)
+}
+
+func testAccMultiTenantDistributionConfig_multipleCustomHeaders() string {
+	return `
+resource "aws_cloudfront_multitenant_distribution" "test" {
+  enabled = false
+  comment = "Test distribution with multiple custom headers"
+
+  origin {
+    domain_name = "example.com"
+    id          = "test-origin"
+
+    # Multiple custom headers to test set ordering doesn't cause issues
+    custom_header {
+      header_name  = "X-Custom-Header-1"
+      header_value = "value1"
+    }
+
+    custom_header {
+      header_name  = "X-Custom-Header-2"
+      header_value = "value2"
+    }
+
+    custom_header {
+      header_name  = "X-Custom-Header-3"
+      header_value = "value3"
+    }
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "test-origin"
+    viewer_protocol_policy = "redirect-to-https"
+    cache_policy_id        = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+
+    allowed_methods {
+      items          = ["GET", "HEAD"]
+      cached_methods = ["GET", "HEAD"]
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  tenant_config {
+    parameter_definition {
+      name = "origin_domain"
+      definition {
+        string_schema {
+          required = true
+          comment  = "Origin domain parameter"
+        }
+      }
+    }
+  }
+}
+`
 }
