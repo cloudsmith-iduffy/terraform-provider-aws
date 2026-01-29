@@ -113,7 +113,9 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 				Computed:   true,
 			},
 			names.AttrComment: schema.StringAttribute{
-				Required: true,
+				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString(""),
 			},
 			"default_root_object": schema.StringAttribute{
 				Optional: true,
@@ -132,31 +134,12 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 				Optional: true,
 				// Note: For multi-tenant distributions, this must be a WAF V2 web ACL if specified
 			},
+			"active_trusted_key_groups": schema.ListAttribute{
+				CustomType: fwtypes.NewListNestedObjectTypeOf[activeTrustedKeyGroupsModel](ctx),
+				Computed:   true,
+			},
 		},
 		Blocks: map[string]schema.Block{
-			"active_trusted_key_groups": schema.ListNestedBlock{
-				CustomType: fwtypes.NewListNestedObjectTypeOf[activeTrustedKeyGroupsModel](ctx),
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						names.AttrEnabled: schema.BoolAttribute{Computed: true},
-					},
-					Blocks: map[string]schema.Block{
-						"items": schema.ListNestedBlock{
-							CustomType: fwtypes.NewListNestedObjectTypeOf[kgKeyPairIDsModel](ctx),
-							NestedObject: schema.NestedBlockObject{
-								Attributes: map[string]schema.Attribute{
-									"key_group_id": schema.StringAttribute{Computed: true},
-									"key_pair_ids": schema.ListAttribute{
-										CustomType:  fwtypes.ListOfStringType,
-										Computed:    true,
-										ElementType: types.StringType,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
 			"custom_error_response": schema.SetNestedBlock{
 				CustomType: fwtypes.NewSetNestedObjectTypeOf[customErrorResponseModel](ctx),
 				NestedObject: schema.NestedBlockObject{
@@ -513,6 +496,9 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 										Computed: true,
 										Default:  int32default.StaticInt32(defaultOriginReadTimeout),
 									},
+									names.AttrOwnerAccountID: schema.StringAttribute{
+										Optional: true,
+									},
 									"vpc_origin_id": schema.StringAttribute{
 										Required: true,
 									},
@@ -522,8 +508,8 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 					},
 				},
 			},
-			"origin_group": schema.ListNestedBlock{
-				CustomType: fwtypes.NewListNestedObjectTypeOf[originGroupModel](ctx),
+			"origin_group": schema.SetNestedBlock{
+				CustomType: fwtypes.NewSetNestedObjectTypeOf[originGroupModel](ctx),
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						names.AttrID: schema.StringAttribute{
@@ -1043,7 +1029,7 @@ type multiTenantDistributionResourceModel struct {
 	InProgressInvalidationBatches types.Int32                                                  `tfsdk:"in_progress_invalidation_batches"`
 	LastModifiedTime              timetypes.RFC3339                                            `tfsdk:"last_modified_time"`
 	Origin                        fwtypes.SetNestedObjectValueOf[originModel]                  `tfsdk:"origin" autoflex:",xmlwrapper=Items"`
-	OriginGroup                   fwtypes.ListNestedObjectValueOf[originGroupModel]            `tfsdk:"origin_group" autoflex:",xmlwrapper=Items,omitempty"`
+	OriginGroup                   fwtypes.SetNestedObjectValueOf[originGroupModel]             `tfsdk:"origin_group" autoflex:",xmlwrapper=Items,omitempty"`
 	Restrictions                  fwtypes.ListNestedObjectValueOf[restrictionsModel]           `tfsdk:"restrictions"`
 	Status                        types.String                                                 `tfsdk:"status"`
 	Tags                          tftags.Map                                                   `tfsdk:"tags"`
@@ -1091,6 +1077,7 @@ type originShieldModel struct {
 type vpcOriginConfigModel struct {
 	OriginKeepaliveTimeout types.Int32  `tfsdk:"origin_keepalive_timeout"`
 	OriginReadTimeout      types.Int32  `tfsdk:"origin_read_timeout"`
+	OwnerAccountID         types.String `tfsdk:"owner_account_id"`
 	VpcOriginID            types.String `tfsdk:"vpc_origin_id"`
 }
 
@@ -1210,8 +1197,8 @@ type activeTrustedKeyGroupsModel struct {
 }
 
 type kgKeyPairIDsModel struct {
-	KeyGroupID types.String                      `tfsdk:"key_group_id"`
-	KeyPairIDs fwtypes.ListValueOf[types.String] `tfsdk:"key_pair_ids" autoflex:",xmlwrapper=Items"`
+	KeyGroupID types.String                     `tfsdk:"key_group_id"`
+	KeyPairIDs fwtypes.SetValueOf[types.String] `tfsdk:"key_pair_ids" autoflex:",xmlwrapper=Items"`
 }
 
 // fixOriginConfigs ensures that each origin has the required S3OriginConfig when no custom or VPC origin config is specified.
