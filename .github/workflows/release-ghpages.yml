@@ -28,12 +28,6 @@ jobs:
           - goos: darwin
             goarch: arm64
     steps:
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
-          sudo apt-get clean
-          df -h /
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
