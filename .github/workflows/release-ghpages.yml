@@ -9,8 +9,24 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      max-parallel: 1
+      matrix:
+        goos: [linux, linux, darwin]
+        goarch: [amd64, arm64, arm64]
+        exclude:
+          - goos: linux
+            goarch: arm64
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: arm64
     steps:
       - name: Free disk space
         run: |
@@ -28,6 +44,41 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
+      - name: Build
+        env:
+          CGO_ENABLED: 0
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          BINARY_NAME="terraform-provider-aws_v${VERSION}"
+          ARCHIVE_NAME="terraform-provider-aws_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}.zip"
+          go build -trimpath -ldflags="-s -w -X github.com/hashicorp/terraform-provider-aws/version.ProviderVersion=${VERSION}" -o "${BINARY_NAME}"
+          zip "${ARCHIVE_NAME}" "${BINARY_NAME}"
+          echo "ARCHIVE_NAME=${ARCHIVE_NAME}" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-provider-aws_${{ matrix.goos }}_${{ matrix.goarch }}
+          path: ${{ env.ARCHIVE_NAME }}
+          retention-days: 1
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
       - name: Import GPG key
         id: import_gpg
         uses: crazy-max/ghaction-import-gpg@v6
@@ -35,14 +86,20 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          version: latest
-          args: release
+      - name: Generate checksums and sign
+        run: |
+          cd dist
+          VERSION=${GITHUB_REF_NAME#v}
+          cp ../terraform-registry-manifest.json "terraform-provider-aws_${VERSION}_manifest.json"
+          shasum -a 256 *.zip "terraform-provider-aws_${VERSION}_manifest.json" > "terraform-provider-aws_${VERSION}_SHA256SUMS"
+          gpg --batch --local-user "${{ steps.import_gpg.outputs.fingerprint }}" --output "terraform-provider-aws_${VERSION}_SHA256SUMS.sig" --detach-sign "terraform-provider-aws_${VERSION}_SHA256SUMS"
+          ls -la
+
+      - name: Create GitHub Release
         env:
-          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/* --title "${GITHUB_REF_NAME}" --notes ""
 
       - name: Publish to GitHub Pages Registry
         uses: AbsaOSS/ghpages-to-tf-provider-registry@v0.1

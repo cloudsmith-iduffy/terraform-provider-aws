@@ -15,13 +15,12 @@ builds:
     goos:
       - linux
       - darwin
-      - windows
     goarch:
       - amd64
       - arm64
     ignore:
-      - goos: windows
-        goarch: arm64
+      - goos: darwin
+        goarch: amd64
     binary: '{{ .ProjectName }}_v{{ .Version }}'
 archives:
   - formats:
