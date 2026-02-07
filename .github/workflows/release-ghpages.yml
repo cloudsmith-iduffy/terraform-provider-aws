@@ -15,11 +15,6 @@ jobs:
       fail-fast: true
       max-parallel: 1
       matrix:
-        goos: [linux, linux, darwin]
-        goarch: [amd64, arm64, arm64]
-        exclude:
-          - goos: linux
-            goarch: arm64
         include:
           - goos: linux
             goarch: amd64
