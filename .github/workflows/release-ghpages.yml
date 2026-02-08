@@ -38,6 +38,14 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
+      - name: Export GPG public key
+        id: gpg_pub
+        run: |
+          PUB_KEY=$(gpg --armor --export "${{ steps.import_gpg.outputs.fingerprint }}")
+          echo "ascii_armor<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$PUB_KEY" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -53,4 +61,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           artifacts_dir: dist
           gpg_keyid: ${{ steps.import_gpg.outputs.keyid }}
-          gpg_ascii_armor: ${{ steps.import_gpg.outputs.pub_ascii_armor }}
+          gpg_ascii_armor: ${{ steps.gpg_pub.outputs.ascii_armor }}
