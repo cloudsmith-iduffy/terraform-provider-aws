@@ -100,8 +100,8 @@ jobs:
           }
           EOF
           
-          # Create versions.json
-          cat > terraform/providers/v1/registry.terraform.io/${NAMESPACE}/aws/versions <<EOF
+          # Create versions index.json
+          cat > terraform/providers/v1/registry.terraform.io/${NAMESPACE}/aws/index.json <<EOF
           {
             "versions": [
               {
