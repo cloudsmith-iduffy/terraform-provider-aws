@@ -1,6 +1,9 @@
 name: Test Registry Publish Only
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - test-registry
 
 permissions:
   contents: write
