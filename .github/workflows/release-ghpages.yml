@@ -60,5 +60,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           artifacts_dir: dist
+          branch: gh-pages
           gpg_keyid: ${{ steps.import_gpg.outputs.keyid }}
           gpg_ascii_armor: ${{ steps.gpg_pub.outputs.ascii_armor }}
