@@ -1,0 +1,64 @@
+name: Test Registry Publishing
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create fake artifacts
+        run: |
+          mkdir -p dist
+          echo "fake binary" > dist/terraform-provider-aws_6.31.1_linux_amd64.zip
+          cp terraform-registry-manifest.json dist/terraform-provider-aws_6.31.1_manifest.json
+          cd dist
+          shasum -a 256 *.zip *.json > terraform-provider-aws_6.31.1_SHA256SUMS
+
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Export GPG public key
+        id: gpg_pub
+        run: |
+          PUB_KEY=$(gpg --armor --export "${{ steps.import_gpg.outputs.fingerprint }}")
+          echo "ascii_armor<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$PUB_KEY" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Sign checksums
+        run: |
+          cd dist
+          gpg --batch --local-user "${{ steps.import_gpg.outputs.fingerprint }}" \
+            --output terraform-provider-aws_6.31.1_SHA256SUMS.sig \
+            --detach-sign terraform-provider-aws_6.31.1_SHA256SUMS
+
+      - name: Debug - Show files and env
+        run: |
+          ls -la dist/
+          echo "TOKEN length: ${#TOKEN}"
+          echo "BRANCH: $BRANCH"
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: gh-pages
+
+      - name: Publish to GitHub Pages Registry
+        uses: AbsaOSS/ghpages-to-tf-provider-registry@v0.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts_dir: dist
+          branch: gh-pages
+          gpg_keyid: ${{ steps.import_gpg.outputs.keyid }}
+          gpg_ascii_armor: ${{ steps.gpg_pub.outputs.ascii_armor }}
