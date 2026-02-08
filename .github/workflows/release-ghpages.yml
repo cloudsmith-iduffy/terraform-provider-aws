@@ -89,9 +89,9 @@ jobs:
           
           # Create directory structure
           mkdir -p .well-known
-          mkdir -p terraform/providers/v1/${NAMESPACE}/aws/${VERSION}/download/linux_amd64
-          mkdir -p terraform/providers/v1/${NAMESPACE}/aws/${VERSION}/download/linux_arm64
-          mkdir -p terraform/providers/v1/${NAMESPACE}/aws/${VERSION}/download/darwin_arm64
+          mkdir -p terraform/providers/v1/registry.terraform.io/${NAMESPACE}/aws/${VERSION}/download/linux_amd64
+          mkdir -p terraform/providers/v1/registry.terraform.io/${NAMESPACE}/aws/${VERSION}/download/linux_arm64
+          mkdir -p terraform/providers/v1/registry.terraform.io/${NAMESPACE}/aws/${VERSION}/download/darwin_arm64
           
           # Create .well-known/terraform.json for service discovery
           cat > .well-known/terraform.json <<EOF
@@ -101,7 +101,7 @@ jobs:
           EOF
           
           # Create versions.json
-          cat > terraform/providers/v1/${NAMESPACE}/aws/versions <<EOF
+          cat > terraform/providers/v1/registry.terraform.io/${NAMESPACE}/aws/versions <<EOF
           {
             "versions": [
               {
@@ -120,7 +120,7 @@ jobs:
           # Create download.json for each platform
           for platform in "linux_amd64" "linux_arm64" "darwin_arm64"; do
             SHASUM=$(cd ../dist && shasum -a 256 ${PROVIDER_NAME}_${VERSION}_${platform}.zip | awk '{print $1}')
-            cat > terraform/providers/v1/${NAMESPACE}/aws/${VERSION}/download/${platform}/index.json <<EOF
+            cat > terraform/providers/v1/registry.terraform.io/${NAMESPACE}/aws/${VERSION}/download/${platform}/index.json <<EOF
           {
             "protocols": ["5.0"],
             "os": "${platform%_*}",
