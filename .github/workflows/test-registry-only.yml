@@ -1,0 +1,132 @@
+name: Test Registry Publish Only
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  test-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create mock dist artifacts
+        run: |
+          mkdir -p dist
+          cd dist
+          # Create dummy zip files
+          echo "mock" > terraform-provider-aws_6.31.1_linux_amd64.zip
+          echo "mock" > terraform-provider-aws_6.31.1_linux_arm64.zip
+          echo "mock" > terraform-provider-aws_6.31.1_darwin_arm64.zip
+          # Create dummy checksums
+          shasum -a 256 *.zip > terraform-provider-aws_6.31.1_SHA256SUMS
+          echo "mock sig" > terraform-provider-aws_6.31.1_SHA256SUMS.sig
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Export GPG public key
+        id: gpg_pub
+        run: |
+          ASCII_ARMOR=$(gpg --armor --export ${{ secrets.GPG_KEYID }})
+          echo "ascii_armor<<EOF" >> $GITHUB_OUTPUT
+          echo "$ASCII_ARMOR" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Generate registry metadata
+        env:
+          GPG_KEYID: ${{ secrets.GPG_KEYID }}
+        run: |
+          set -x
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          
+          echo "Attempting to clone gh-pages branch..."
+          git clone --depth=1 --branch=gh-pages "$REPO_URL" registry-repo || {
+            echo "gh-pages branch doesn't exist, creating new one"
+            git clone --depth=1 "$REPO_URL" registry-repo
+            cd registry-repo
+            git checkout --orphan gh-pages
+            git rm -rf . || true
+          }
+          
+          echo "Successfully cloned existing gh-pages"
+          cd registry-repo
+          
+          PROVIDER_NAME="terraform-provider-aws"
+          VERSION="6.31.1"
+          NAMESPACE="cloudsmith-iduffy"
+          
+          # Create directory structure
+          mkdir -p .well-known
+          mkdir -p terraform/providers/v1/registry.terraform.io/${NAMESPACE}/aws/${VERSION}/download/linux_amd64
+          mkdir -p terraform/providers/v1/registry.terraform.io/${NAMESPACE}/aws/${VERSION}/download/linux_arm64
+          mkdir -p terraform/providers/v1/registry.terraform.io/${NAMESPACE}/aws/${VERSION}/download/darwin_arm64
+          
+          # Create .well-known/terraform.json for service discovery
+          cat > .well-known/terraform.json <<EOF
+          {
+            "providers.v1": "/terraform-provider-aws/terraform/providers/v1/"
+          }
+          EOF
+          
+          # Create versions.json
+          cat > terraform/providers/v1/registry.terraform.io/${NAMESPACE}/aws/versions <<EOF
+          {
+            "versions": [
+              {
+                "version": "${VERSION}",
+                "protocols": ["5.0"],
+                "platforms": [
+                  {"os": "linux", "arch": "amd64"},
+                  {"os": "linux", "arch": "arm64"},
+                  {"os": "darwin", "arch": "arm64"}
+                ]
+              }
+            ]
+          }
+          EOF
+          
+          # Create download.json for each platform
+          for platform in "linux_amd64" "linux_arm64" "darwin_arm64"; do
+            SHASUM=$(cd ../dist && shasum -a 256 ${PROVIDER_NAME}_${VERSION}_${platform}.zip | awk '{print $1}')
+            cat > terraform/providers/v1/registry.terraform.io/${NAMESPACE}/aws/${VERSION}/download/${platform}/index.json <<EOF
+          {
+            "protocols": ["5.0"],
+            "os": "${platform%_*}",
+            "arch": "${platform#*_}",
+            "filename": "${PROVIDER_NAME}_${VERSION}_${platform}.zip",
+            "download_url": "https://github.com/${NAMESPACE}/terraform-provider-aws/releases/download/v${VERSION}/${PROVIDER_NAME}_${VERSION}_${platform}.zip",
+            "shasums_url": "https://github.com/${NAMESPACE}/terraform-provider-aws/releases/download/v${VERSION}/${PROVIDER_NAME}_${VERSION}_SHA256SUMS",
+            "shasums_signature_url": "https://github.com/${NAMESPACE}/terraform-provider-aws/releases/download/v${VERSION}/${PROVIDER_NAME}_${VERSION}_SHA256SUMS.sig",
+            "shasum": "${SHASUM}",
+            "signing_keys": {
+              "gpg_public_keys": [
+                {
+                  "key_id": "${GPG_KEYID}",
+                  "ascii_armor": "${{ steps.gpg_pub.outputs.ascii_armor }}"
+                }
+              ]
+            }
+          }
+          EOF
+          done
+          
+          git add .
+          git commit -m "Test: Update registry metadata for v${VERSION}" || echo "No changes to commit"
+          git push origin gh-pages
+          
+          echo "Registry metadata published successfully!"
+          echo "Check structure:"
+          find terraform -type f | head -20
