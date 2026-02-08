@@ -88,9 +88,17 @@ jobs:
           NAMESPACE="cloudsmith-iduffy"
           
           # Create directory structure
+          mkdir -p .well-known
           mkdir -p terraform/providers/v1/${NAMESPACE}/aws/${VERSION}/download/linux_amd64
           mkdir -p terraform/providers/v1/${NAMESPACE}/aws/${VERSION}/download/linux_arm64
           mkdir -p terraform/providers/v1/${NAMESPACE}/aws/${VERSION}/download/darwin_arm64
+          
+          # Create .well-known/terraform.json for service discovery
+          cat > .well-known/terraform.json <<EOF
+          {
+            "providers.v1": "/terraform-provider-aws/terraform/providers/v1/"
+          }
+          EOF
           
           # Create versions.json
           cat > terraform/providers/v1/${NAMESPACE}/aws/versions <<EOF
