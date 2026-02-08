@@ -86,6 +86,11 @@ jobs:
           VERSION="6.31.1"
           NAMESPACE="cloudsmith-iduffy"
           
+          # Create directory structure
+          mkdir -p terraform/providers/v1/${NAMESPACE}/aws/${VERSION}/download/linux_amd64
+          mkdir -p terraform/providers/v1/${NAMESPACE}/aws/${VERSION}/download/linux_arm64
+          mkdir -p terraform/providers/v1/${NAMESPACE}/aws/${VERSION}/download/darwin_arm64
+          
           # Create versions.json
           cat > terraform/providers/v1/${NAMESPACE}/aws/versions <<EOF
           {
