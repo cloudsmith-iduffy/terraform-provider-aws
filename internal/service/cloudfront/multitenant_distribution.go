@@ -690,6 +690,37 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 	}
 }
 
+func (r *multiTenantDistributionResource) ModifyPlan(ctx context.Context, request resource.ModifyPlanRequest, response *resource.ModifyPlanResponse) {
+	// On create or destroy, nothing to do.
+	if request.State.Raw.IsNull() || request.Plan.Raw.IsNull() {
+		return
+	}
+
+	var old, new multiTenantDistributionResourceModel
+	response.Diagnostics.Append(request.State.Get(ctx, &old)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	response.Diagnostics.Append(request.Plan.Get(ctx, &new)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// When there are no real configuration changes, preserve volatile Computed-only
+	// field values from state. Without this, the framework marks ALL Computed-only
+	// fields as unknown when any attribute differs, creating a spurious diff that
+	// triggers an unnecessary update. On Terraform 1.5.x this causes a crash when
+	// the resource contains sensitive values in Set blocks.
+	if !mtDistributionHasChanges(old, new) && old.Tags.Equal(new.Tags) {
+		// Use SetAttribute for individual paths to avoid reconstructing the full
+		// plan model, which would strip sensitive marks from Set elements.
+		response.Diagnostics.Append(response.Plan.SetAttribute(ctx, path.Root("etag"), old.ETag)...)
+		response.Diagnostics.Append(response.Plan.SetAttribute(ctx, path.Root("last_modified_time"), old.LastModifiedTime)...)
+		response.Diagnostics.Append(response.Plan.SetAttribute(ctx, path.Root(names.AttrStatus), old.Status)...)
+		response.Diagnostics.Append(response.Plan.SetAttribute(ctx, path.Root("in_progress_invalidation_batches"), old.InProgressInvalidationBatches)...)
+	}
+}
+
 func (r *multiTenantDistributionResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) {
 	var data multiTenantDistributionResourceModel
 	response.Diagnostics.Append(request.Plan.Get(ctx, &data)...)
