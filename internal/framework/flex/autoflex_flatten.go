@@ -2080,8 +2080,24 @@ func (flattener *autoFlattener) xmlWrapperFlattenRule1(ctx context.Context, vFro
 					}
 				}
 			case reflect.Struct:
-				// Handle complex struct types by converting to the target element type
-				if elemTyper, ok := tTo.(attr.TypeWithElementType); ok && elemTyper.ElementType() != nil {
+				// Handle struct types - convert to ObjectValue using NestedObjectType interface
+				if objType, ok := elementType.(fwtypes.NestedObjectType); ok {
+					objPtr, d := objType.NewObjectPtr(ctx)
+					diags.Append(d...)
+					if diags.HasError() {
+						return diags
+					}
+					diags.Append(autoFlattenConvert(ctx, item.Interface(), objPtr, flattener)...)
+					if diags.HasError() {
+						return diags
+					}
+					objVal, d := objType.ValueFromObjectPtr(ctx, objPtr)
+					diags.Append(d...)
+					if diags.HasError() {
+						return diags
+					}
+					elements[i] = objVal
+				} else if elemTyper, ok := tTo.(attr.TypeWithElementType); ok && elemTyper.ElementType() != nil {
 					elemType := elemTyper.ElementType()
 
 					// Create a new instance of the target element type

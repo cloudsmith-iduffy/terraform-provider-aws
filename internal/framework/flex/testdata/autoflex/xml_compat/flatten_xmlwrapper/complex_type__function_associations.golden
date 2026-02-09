@@ -163,13 +163,23 @@
     }
   },
   {
+    "@level": "trace",
+    "@message": "Source is not XML wrapper struct",
+    "@module": "provider.autoflex",
+    "autoflex.source.path": "",
+    "autoflex.source.type": "github.com/hashicorp/terraform-provider-aws/internal/framework/flex.FunctionAssociation",
+    "autoflex.target.path": "",
+    "autoflex.target.type": "*github.com/hashicorp/terraform-provider-aws/internal/framework/flex.FunctionAssociationTF",
+    "source_type": "flex.FunctionAssociation"
+  },
+  {
     "@level": "info",
     "@message": "Converting",
     "@module": "provider.autoflex",
     "autoflex.source.path": "",
     "autoflex.source.type": "github.com/hashicorp/terraform-provider-aws/internal/framework/flex.FunctionAssociation",
     "autoflex.target.path": "",
-    "autoflex.target.type": "github.com/hashicorp/terraform-provider-aws/internal/framework/types.ObjectValueOf[github.com/hashicorp/terraform-provider-aws/internal/framework/flex.FunctionAssociationTF]"
+    "autoflex.target.type": "*github.com/hashicorp/terraform-provider-aws/internal/framework/flex.FunctionAssociationTF"
   },
   {
     "@level": "trace",
@@ -227,13 +237,23 @@
     }
   },
   {
+    "@level": "trace",
+    "@message": "Source is not XML wrapper struct",
+    "@module": "provider.autoflex",
+    "autoflex.source.path": "",
+    "autoflex.source.type": "github.com/hashicorp/terraform-provider-aws/internal/framework/flex.FunctionAssociation",
+    "autoflex.target.path": "",
+    "autoflex.target.type": "*github.com/hashicorp/terraform-provider-aws/internal/framework/flex.FunctionAssociationTF",
+    "source_type": "flex.FunctionAssociation"
+  },
+  {
     "@level": "info",
     "@message": "Converting",
     "@module": "provider.autoflex",
     "autoflex.source.path": "",
     "autoflex.source.type": "github.com/hashicorp/terraform-provider-aws/internal/framework/flex.FunctionAssociation",
     "autoflex.target.path": "",
-    "autoflex.target.type": "github.com/hashicorp/terraform-provider-aws/internal/framework/types.ObjectValueOf[github.com/hashicorp/terraform-provider-aws/internal/framework/flex.FunctionAssociationTF]"
+    "autoflex.target.type": "*github.com/hashicorp/terraform-provider-aws/internal/framework/flex.FunctionAssociationTF"
   },
   {
     "@level": "trace",
