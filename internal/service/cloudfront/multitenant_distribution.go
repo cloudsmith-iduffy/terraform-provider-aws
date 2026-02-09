@@ -157,8 +157,8 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 					},
 				},
 			},
-			"custom_error_response": schema.ListNestedBlock{
-				CustomType: fwtypes.NewListNestedObjectTypeOf[customErrorResponseModel](ctx),
+			"custom_error_response": schema.SetNestedBlock{
+				CustomType: fwtypes.NewSetNestedObjectTypeOf[customErrorResponseModel](ctx),
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"error_caching_min_ttl": schema.Int64Attribute{
@@ -171,9 +171,11 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 						},
 						"response_code": schema.StringAttribute{
 							Optional: true,
+							Computed: true,
 						},
 						"response_page_path": schema.StringAttribute{
 							Optional: true,
+							Computed: true,
 						},
 					},
 				},
@@ -402,8 +404,8 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 					},
 				},
 			},
-			"origin": schema.ListNestedBlock{
-				CustomType: fwtypes.NewListNestedObjectTypeOf[originModel](ctx),
+			"origin": schema.SetNestedBlock{
+				CustomType: fwtypes.NewSetNestedObjectTypeOf[originModel](ctx),
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"connection_attempts": schema.Int32Attribute{
@@ -437,8 +439,8 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 						},
 					},
 					Blocks: map[string]schema.Block{
-						"custom_header": schema.ListNestedBlock{
-							CustomType: fwtypes.NewListNestedObjectTypeOf[customHeaderModel](ctx),
+						"custom_header": schema.SetNestedBlock{
+							CustomType: fwtypes.NewSetNestedObjectTypeOf[customHeaderModel](ctx),
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
 									"header_name": schema.StringAttribute{
@@ -701,6 +703,9 @@ func (r *multiTenantDistributionResource) Create(ctx context.Context, request re
 	// This is needed for S3 origins using Origin Access Control (OAC)
 	fixOriginConfigs(input.DistributionConfigWithTags.DistributionConfig.Origins)
 
+	// Fix custom error responses: CloudFront requires ResponseCode and ResponsePagePath to be present even if empty
+	fixCustomErrorResponses(input.DistributionConfigWithTags.DistributionConfig.CustomErrorResponses)
+
 	// Set required computed fields that AutoFlex can't handle
 	input.DistributionConfigWithTags.DistributionConfig.CallerReference = aws.String(id.UniqueId())
 
@@ -829,6 +834,9 @@ func (r *multiTenantDistributionResource) Update(ctx context.Context, request re
 		// This is needed for S3 origins using Origin Access Control (OAC)
 		fixOriginConfigs(input.DistributionConfig.Origins)
 
+		// Fix custom error responses: CloudFront requires ResponseCode and ResponsePagePath to be present even if empty
+		fixCustomErrorResponses(input.DistributionConfig.CustomErrorResponses)
+
 		// Ensure ConnectionMode remains tenant-only
 		input.DistributionConfig.ConnectionMode = awstypes.ConnectionModeTenantOnly
 
@@ -879,11 +887,11 @@ func mtDistributionHasChanges(old, new multiTenantDistributionResourceModel) boo
 		!old.Enabled.Equal(new.Enabled) ||
 		!old.HTTPVersion.Equal(new.HTTPVersion) ||
 		!old.WebACLID.Equal(new.WebACLID) ||
-		!old.CacheBehavior.Equal(new.CacheBehavior) ||
-		!old.CustomErrorResponse.Equal(new.CustomErrorResponse) ||
+		!old.CacheBehaviors.Equal(new.CacheBehaviors) ||
+		!old.CustomErrorResponses.Equal(new.CustomErrorResponses) ||
 		!old.DefaultCacheBehavior.Equal(new.DefaultCacheBehavior) ||
-		!old.Origin.Equal(new.Origin) ||
-		!old.OriginGroup.Equal(new.OriginGroup) ||
+		!old.Origins.Equal(new.Origins) ||
+		!old.OriginGroups.Equal(new.OriginGroups) ||
 		!old.Restrictions.Equal(new.Restrictions) ||
 		!old.TenantConfig.Equal(new.TenantConfig) ||
 		!old.ViewerCertificate.Equal(new.ViewerCertificate)
@@ -1029,11 +1037,11 @@ func disableMultiTenantDistribution(ctx context.Context, conn *cloudfront.Client
 type multiTenantDistributionResourceModel struct {
 	ActiveTrustedKeyGroups        fwtypes.ListNestedObjectValueOf[activeTrustedKeyGroupsModel] `tfsdk:"active_trusted_key_groups" autoflex:",xmlwrapper=Items,omitempty"`
 	ARN                           types.String                                                 `tfsdk:"arn"`
-	CacheBehavior                 fwtypes.ListNestedObjectValueOf[cacheBehaviorModel]          `tfsdk:"cache_behavior" autoflex:",xmlwrapper=Items,omitempty"`
+	CacheBehaviors                fwtypes.ListNestedObjectValueOf[cacheBehaviorModel]          `tfsdk:"cache_behavior" autoflex:",xmlwrapper=Items,omitempty"`
 	CallerReference               types.String                                                 `tfsdk:"caller_reference"`
 	ConnectionMode                fwtypes.StringEnum[awstypes.ConnectionMode]                  `tfsdk:"connection_mode"`
 	Comment                       types.String                                                 `tfsdk:"comment"`
-	CustomErrorResponse           fwtypes.ListNestedObjectValueOf[customErrorResponseModel]    `tfsdk:"custom_error_response" autoflex:",xmlwrapper=Items,omitempty"`
+	CustomErrorResponses          fwtypes.SetNestedObjectValueOf[customErrorResponseModel]     `tfsdk:"custom_error_response" autoflex:",xmlwrapper=Items,omitempty"`
 	DefaultCacheBehavior          fwtypes.ListNestedObjectValueOf[defaultCacheBehaviorModel]   `tfsdk:"default_cache_behavior"`
 	DefaultRootObject             types.String                                                 `tfsdk:"default_root_object" autoflex:",omitempty"`
 	DomainName                    types.String                                                 `tfsdk:"domain_name"`
@@ -1043,8 +1051,8 @@ type multiTenantDistributionResourceModel struct {
 	ID                            types.String                                                 `tfsdk:"id"`
 	InProgressInvalidationBatches types.Int32                                                  `tfsdk:"in_progress_invalidation_batches"`
 	LastModifiedTime              timetypes.RFC3339                                            `tfsdk:"last_modified_time"`
-	Origin                        fwtypes.ListNestedObjectValueOf[originModel]                 `tfsdk:"origin" autoflex:",xmlwrapper=Items"`
-	OriginGroup                   fwtypes.ListNestedObjectValueOf[originGroupModel]            `tfsdk:"origin_group" autoflex:",xmlwrapper=Items,omitempty"`
+	Origins                       fwtypes.SetNestedObjectValueOf[originModel]                  `tfsdk:"origin" autoflex:",xmlwrapper=Items"`
+	OriginGroups                  fwtypes.ListNestedObjectValueOf[originGroupModel]            `tfsdk:"origin_group" autoflex:",xmlwrapper=Items,omitempty"`
 	Restrictions                  fwtypes.ListNestedObjectValueOf[restrictionsModel]           `tfsdk:"restrictions"`
 	Status                        types.String                                                 `tfsdk:"status"`
 	Tags                          tftags.Map                                                   `tfsdk:"tags"`
@@ -1058,7 +1066,7 @@ type multiTenantDistributionResourceModel struct {
 type originModel struct {
 	ConnectionAttempts        types.Int32                                              `tfsdk:"connection_attempts"`
 	ConnectionTimeout         types.Int32                                              `tfsdk:"connection_timeout"`
-	CustomHeader              fwtypes.ListNestedObjectValueOf[customHeaderModel]       `tfsdk:"custom_header" autoflex:",xmlwrapper=Items"`
+	CustomHeaders             fwtypes.SetNestedObjectValueOf[customHeaderModel]        `tfsdk:"custom_header" autoflex:",xmlwrapper=Items"`
 	CustomOriginConfig        fwtypes.ListNestedObjectValueOf[customOriginConfigModel] `tfsdk:"custom_origin_config" autoflex:",omitempty"`
 	DomainName                types.String                                             `tfsdk:"domain_name"`
 	ID                        types.String                                             `tfsdk:"id"`
@@ -1148,7 +1156,7 @@ type cacheBehaviorModel struct {
 }
 
 type customErrorResponseModel struct {
-	ErrorCachingMinTtl types.Int64  `tfsdk:"error_caching_min_ttl"`
+	ErrorCachingMinTTL types.Int64  `tfsdk:"error_caching_min_ttl"`
 	ErrorCode          types.Int64  `tfsdk:"error_code"`
 	ResponseCode       types.String `tfsdk:"response_code"`
 	ResponsePagePath   types.String `tfsdk:"response_page_path"`
@@ -1230,6 +1238,24 @@ func fixOriginConfigs(origins *awstypes.Origins) {
 			origin.S3OriginConfig = &awstypes.S3OriginConfig{
 				OriginAccessIdentity: aws.String(""),
 			}
+		}
+	}
+}
+
+// fixCustomErrorResponses ensures ResponseCode and ResponsePagePath are set to empty strings
+// when nil, as AWS API requires these fields to be present even if empty.
+func fixCustomErrorResponses(customErrorResponses *awstypes.CustomErrorResponses) {
+	if customErrorResponses == nil || customErrorResponses.Items == nil {
+		return
+	}
+
+	for i := range customErrorResponses.Items {
+		item := &customErrorResponses.Items[i]
+		if item.ResponseCode == nil {
+			item.ResponseCode = aws.String("")
+		}
+		if item.ResponsePagePath == nil {
+			item.ResponsePagePath = aws.String("")
 		}
 	}
 }

@@ -1,0 +1,145 @@
+name: Release to GitHub Pages Registry
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/lib/jvm /usr/share/dotnet /usr/share/swift /usr/local/.ghcup \
+            /usr/local/julia* /usr/local/lib/android /usr/local/share/chromium \
+            /opt/microsoft /opt/google /opt/az /usr/local/share/powershell /opt/hostedtoolcache
+          docker system prune -af || true
+          docker builder prune -af || true
+          df -h /
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Export GPG public key
+        id: gpg_pub
+        run: |
+          # Export and escape newlines for JSON
+          ASCII_ARMOR=$(gpg --armor --export "${{ steps.import_gpg.outputs.fingerprint }}" | awk '{printf "%s\\n", $0}')
+          echo "ascii_armor=${ASCII_ARMOR}" >> "$GITHUB_OUTPUT"
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: release --parallelism 1
+        env:
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to GitHub Pages Registry
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GPG_KEYID: ${{ steps.import_gpg.outputs.keyid }}
+        run: |
+          set -x
+          
+          # Clone or create gh-pages branch
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/cloudsmith-iduffy/terraform-provider-aws.git"
+          
+          echo "Cloning gh-pages branch..."
+          if git clone --depth=1 --branch=gh-pages "$REPO_URL" registry-repo; then
+            cd registry-repo
+          else
+            echo "gh-pages doesn't exist, creating..."
+            mkdir -p registry-repo
+            cd registry-repo
+            git init
+            git remote add origin "$REPO_URL"
+            git checkout -b gh-pages
+          fi
+          
+          # Setup variables
+          PROVIDER_NAME="terraform-provider-aws"
+          VERSION="${GITHUB_REF_NAME#v}"
+          NAMESPACE="cloudsmith-iduffy"
+          REGISTRY_URL="https://cloudsmith-iduffy.github.io/terraform-provider-aws"
+          
+          # Create .well-known/terraform.json
+          mkdir -p .well-known
+          cat > .well-known/terraform.json <<'EOF'
+          {"providers.v1":"/v1/providers/"}
+          EOF
+          
+          # Create versions JSON at /v1/providers/{namespace}/{name}/versions
+          mkdir -p v1/providers/${NAMESPACE}/aws
+          cat > v1/providers/${NAMESPACE}/aws/versions <<EOF
+          {
+            "versions": [
+              {
+                "version": "${VERSION}",
+                "protocols": ["5.0"],
+                "platforms": [
+                  {"os": "linux", "arch": "amd64"},
+                  {"os": "linux", "arch": "arm64"},
+                  {"os": "darwin", "arch": "arm64"}
+                ]
+              }
+            ]
+          }
+          EOF
+          
+          # Create download metadata for each platform at /v1/providers/{namespace}/{name}/{version}/download/{os}/{arch}
+          for platform in "linux_amd64" "linux_arm64" "darwin_arm64"; do
+            OS="${platform%_*}"
+            ARCH="${platform#*_}"
+            mkdir -p v1/providers/${NAMESPACE}/aws/${VERSION}/download/${OS}/${ARCH}
+            SHASUM=$(cd ../dist && shasum -a 256 ${PROVIDER_NAME}_${VERSION}_${platform}.zip | awk '{print $1}')
+            
+            cat > v1/providers/${NAMESPACE}/aws/${VERSION}/download/${OS}/${ARCH}/index.json <<EOF
+          {
+            "protocols": ["5.0"],
+            "os": "${OS}",
+            "arch": "${ARCH}",
+            "filename": "${PROVIDER_NAME}_${VERSION}_${platform}.zip",
+            "download_url": "https://github.com/${NAMESPACE}/terraform-provider-aws/releases/download/v${VERSION}/${PROVIDER_NAME}_${VERSION}_${platform}.zip",
+            "shasums_url": "https://github.com/${NAMESPACE}/terraform-provider-aws/releases/download/v${VERSION}/${PROVIDER_NAME}_${VERSION}_SHA256SUMS",
+            "shasums_signature_url": "https://github.com/${NAMESPACE}/terraform-provider-aws/releases/download/v${VERSION}/${PROVIDER_NAME}_${VERSION}_SHA256SUMS.sig",
+            "shasum": "${SHASUM}",
+            "signing_keys": {
+              "gpg_public_keys": [
+                {
+                  "key_id": "${GPG_KEYID}",
+                  "ascii_armor": "${{ steps.gpg_pub.outputs.ascii_armor }}"
+                }
+              ]
+            }
+          }
+          EOF
+          done
+          
+          git add .
+          git commit -m "Update registry for v${VERSION}" || echo "No changes to commit"
+          git push origin gh-pages
