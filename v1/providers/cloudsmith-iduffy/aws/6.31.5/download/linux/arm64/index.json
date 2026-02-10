@@ -1,0 +1,18 @@
+{
+  "protocols": ["5.0"],
+  "os": "linux",
+  "arch": "arm64",
+  "filename": "terraform-provider-aws_6.31.5_linux_arm64.zip",
+  "download_url": "https://github.com/cloudsmith-iduffy/terraform-provider-aws/releases/download/v6.31.5/terraform-provider-aws_6.31.5_linux_arm64.zip",
+  "shasums_url": "https://github.com/cloudsmith-iduffy/terraform-provider-aws/releases/download/v6.31.5/terraform-provider-aws_6.31.5_SHA256SUMS",
+  "shasums_signature_url": "https://github.com/cloudsmith-iduffy/terraform-provider-aws/releases/download/v6.31.5/terraform-provider-aws_6.31.5_SHA256SUMS.sig",
+  "shasum": "7b0579ed41b602206f12840bee7578bff89fdde175a4c406d8b849a49c0f8b7a",
+  "signing_keys": {
+    "gpg_public_keys": [
+      {
+        "key_id": "99CA18F9588FAAE1",
+        "ascii_armor": "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nmQINBGmHs9EBEACzPAywfZCqUlEIuzCA6VHcNqC2YFK2oMsO58XOPNj5dnh823W6\nUstP+jPE52eSxbzQSe8r0V8Z9mo+O7B9dXqNKIaupG75i/1Uu7QpbZuvNuiIDGv6\nkA8xQWlNlgJ74xShiPNW3RMNZMwyMTaTYjPoeK1mZ/ve0jH3AvRqpAZ1MhQjogiQ\n7MGO64PgI6M8Vu0JVf+HqWKjphocqYUhGyaZCorkH9YFAH+W8Kf8Pq9pK/izBn0J\nPLQ2vFQcEF3mkoCBsnuK9Mhas05b9ox3zYUMUFKO0hBbkge5QnRkhx8Bgw69z1Rv\ncHxeyBZ+0CfGKEQryfC4BWVSJzIp7+MXJFlnjRgBJJM1hp3AouwCH29tPHqpPUAw\nKOtvZyEbu+zd442runOpqiPktzH6RJqIyjxsMg8cSAQd4uV5mP6HW0rp8u/amk+6\nkjsbpHinLJg4UedgBh9SmrOqnJdfvEB33lrfcHWDFAZsyd8H/JhKjxkUSxTyP0h8\n3HdQYuqwiZRhXZgvUdr0Lzf9NxfhlUSJwJrtHuruVWRcIPrhmFqzO2cLkUfERgiN\nuKacMY/xKANebsa9OmIzworozEDAISY2N4cCc6rJ2ZO3swiKAjTu0qMRTRMHEBJG\nQrfeLTWHiYNbSUi2h1MYskGZuYGV/pTgcdiyYZou6e7fAOkB0HNtdwuN5wARAQAB\ntDFUZXJyYWZvcm0gUHJvdmlkZXIgU2lnbmluZyA8aWR1ZmZ5QGNsb3Vkc21pdGgu\naW8+iQJSBBMBCAA8FiEEb13qZAl3bxVqavD4mcoY+ViPquEFAmmHs9EDGy8EBQsJ\nCAcCAiICBhUKCQgLAgQWAgMBAh4HAheAAAoJEJnKGPlYj6rh0+8QAJlBKeW7RKCK\nuEaSYccz/Ef9M+erS7o9JxCVQJgPcGrMmrSfiTt02+LXRQg8ksC97i7ZKQHuPm4V\nXEy45MQkWsaKGQwSpNwEM+z8u9ve2mILg4mkvXqYGqeZDtaxsBaIXhYoBIO4+bmq\nq8YSejSGxkJhF//2nH8TlpBiolRKHJ/ojaFxFjFmzCwM10pY5kKfTdXeEJZyppTB\nosmi8hrlQBMYiwwVB4Btk6gMra024noQPtWXTkjtu59GSOmS0bh/PTVDUp1tIMZF\npXWZSb80t86hxIae0piToEBN/qhXlfGxckOBwk31D6PLqG39222nsl8oVCqPROm0\nUsR0nWOerlMqA/rd2DJWeV2kKGCXtBmqzFa5RjtQ8GhOCD4Ud5OFDT31LkitmN2X\n0EulhCvfjrIUhWMaibRQSaJxgjnJ5Wd2/CEwnFs+X5oWPPIN9i3KOyBFlKQj7F0W\nF30dBU+4i/vlknviut7Zvpq4FbKMsqZAI86JjTEk6Iov8mpNQI3s5BRmP3RxPSWP\n5vtm3u38RlZPcgtsG2JX748i7WYRVal5oSeC748VrBIoFTlup9RAJCkERFZtokyx\nImzmWr4sRt5CPkWsk/MZ31On8psScjFrHj9CF8phy/RNCBUOg7GBzOqKb517vsoB\nKPhGn4yXySQ1R7x3PWKdhBPL6//dOsAk\n=o05g\n-----END PGP PUBLIC KEY BLOCK-----\n"
+      }
+    ]
+  }
+}
