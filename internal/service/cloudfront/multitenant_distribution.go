@@ -21,7 +21,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -166,8 +165,6 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 					Attributes: map[string]schema.Attribute{
 						"error_caching_min_ttl": schema.Int64Attribute{
 							Optional: true,
-							Computed: true,
-							Default:  int64default.StaticInt64(5),
 						},
 						"error_code": schema.Int64Attribute{
 							Required: true,
