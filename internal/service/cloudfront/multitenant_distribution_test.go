@@ -329,12 +329,19 @@ resource "aws_cloudfront_multitenant_distribution" "test" {
   origin {
     domain_name = "example.com"
     id          = "example"
+    origin_path = ""
+
+    connection_attempts         = 3
+    connection_timeout          = 10
+    response_completion_timeout = 30
 
     custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "https-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
+      http_port                = 80
+      https_port               = 443
+      origin_protocol_policy   = "https-only"
+      origin_ssl_protocols     = ["TLSv1.2"]
+      origin_keepalive_timeout = 5
+      origin_read_timeout      = 30
     }
   }
 
@@ -398,16 +405,22 @@ resource "aws_cloudfront_multitenant_distribution" "test" {
     id          = "custom-origin"
     origin_path = "/api"
 
+    connection_attempts         = 3
+    connection_timeout          = 10
+    response_completion_timeout = 30
+
     custom_header {
       header_name  = "X-Custom-Header"
       header_value = "test-value"
     }
 
     custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "https-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
+      http_port                = 80
+      https_port               = 443
+      origin_protocol_policy   = "https-only"
+      origin_ssl_protocols     = ["TLSv1.2"]
+      origin_keepalive_timeout = 5
+      origin_read_timeout      = 30
     }
   }
 
@@ -438,9 +451,10 @@ resource "aws_cloudfront_multitenant_distribution" "test" {
 
   # Custom error response
   custom_error_response {
-    error_code         = 404
-    response_code      = "200"
-    response_page_path = "/404.html"
+    error_code            = 404
+    response_code         = "200"
+    response_page_path    = "/404.html"
+    error_caching_min_ttl = 10
   }
 
   viewer_certificate {
@@ -489,12 +503,19 @@ resource "aws_cloudfront_multitenant_distribution" "test" {
   origin {
     domain_name = "example.com"
     id          = "example"
+    origin_path = ""
+
+    connection_attempts         = 3
+    connection_timeout          = 10
+    response_completion_timeout = 30
 
     custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "https-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
+      http_port                = 80
+      https_port               = 443
+      origin_protocol_policy   = "https-only"
+      origin_ssl_protocols     = ["TLSv1.2"]
+      origin_keepalive_timeout = 5
+      origin_read_timeout      = 30
     }
   }
 
@@ -552,12 +573,19 @@ resource "aws_cloudfront_multitenant_distribution" "test" {
   origin {
     domain_name = "example.com"
     id          = "example"
+    origin_path = ""
+
+    connection_attempts         = 3
+    connection_timeout          = 10
+    response_completion_timeout = 30
 
     custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "https-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
+      http_port                = 80
+      https_port               = 443
+      origin_protocol_policy   = "https-only"
+      origin_ssl_protocols     = ["TLSv1.2"]
+      origin_keepalive_timeout = 5
+      origin_read_timeout      = 30
     }
   }
 
@@ -621,6 +649,7 @@ resource "aws_cloudfront_multitenant_distribution" "test" {
     id                       = aws_s3_bucket.test.bucket_regional_domain_name
     domain_name              = aws_s3_bucket.test.bucket_regional_domain_name
     origin_access_control_id = aws_cloudfront_origin_access_control.test.id
+    origin_path              = ""
 
     connection_attempts         = 3
     connection_timeout          = 10
