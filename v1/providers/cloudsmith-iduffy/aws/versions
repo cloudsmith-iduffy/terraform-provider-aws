@@ -1,7 +1,7 @@
 {
   "versions": [
     {
-      "version": "6.31.6-2",
+      "version": "6.31.6-3",
       "protocols": ["5.0"],
       "platforms": [
         {"os": "linux", "arch": "amd64"},
