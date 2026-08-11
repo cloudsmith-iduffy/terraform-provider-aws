@@ -22,7 +22,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -37,14 +36,6 @@ import (
 	tftags "github.com/hashicorp/terraform-provider-aws/internal/tags"
 	"github.com/hashicorp/terraform-provider-aws/internal/tfresource"
 	"github.com/hashicorp/terraform-provider-aws/names"
-)
-
-const (
-	defaultConnectionAttempts        = 3
-	defaultConnectionTimeout         = 10
-	defaultResponseCompletionTimeout = 30
-	defaultOriginKeepaliveTimeout    = 5
-	defaultOriginReadTimeout         = 30
 )
 
 // @FrameworkResource("aws_cloudfront_multitenant_distribution", name="Multi-tenant Distribution")
@@ -166,18 +157,16 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"error_caching_min_ttl": schema.Int64Attribute{
-							Optional: true,
+							Required: true,
 						},
 						"error_code": schema.Int64Attribute{
 							Required: true,
 						},
 						"response_code": schema.StringAttribute{
 							Optional: true,
-							Computed: true,
 						},
 						"response_page_path": schema.StringAttribute{
 							Optional: true,
-							Computed: true,
 						},
 					},
 				},
@@ -426,16 +415,10 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"connection_attempts": schema.Int32Attribute{
-							Optional:      true,
-							Computed:      true,
-							Default:       int32default.StaticInt32(defaultConnectionAttempts),
-							PlanModifiers: []planmodifier.Int32{useConfigValueModifier{}},
+							Required: true,
 						},
 						"connection_timeout": schema.Int32Attribute{
-							Optional:      true,
-							Computed:      true,
-							Default:       int32default.StaticInt32(defaultConnectionTimeout),
-							PlanModifiers: []planmodifier.Int32{useConfigValueModifier{}},
+							Required: true,
 						},
 						names.AttrDomainName: schema.StringAttribute{
 							Required: true,
@@ -444,18 +427,13 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 							Required: true,
 						},
 						"origin_access_control_id": schema.StringAttribute{
-							Optional: true,
+							Optional: true, // omitempty
 						},
 						"origin_path": schema.StringAttribute{
-							Optional: true,
-							Computed: true,
-							Default:  stringdefault.StaticString(""),
+							Required: true,
 						},
 						"response_completion_timeout": schema.Int32Attribute{
-							Optional:      true,
-							Computed:      true,
-							Default:       int32default.StaticInt32(defaultResponseCompletionTimeout),
-							PlanModifiers: []planmodifier.Int32{useConfigValueModifier{}},
+							Required: true,
 						},
 					},
 					Blocks: map[string]schema.Block{
@@ -487,16 +465,10 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 										CustomType: fwtypes.StringEnumType[awstypes.IpAddressType](),
 									},
 									"origin_keepalive_timeout": schema.Int32Attribute{
-										Optional:      true,
-										Computed:      true,
-										Default:       int32default.StaticInt32(defaultOriginKeepaliveTimeout),
-										PlanModifiers: []planmodifier.Int32{useConfigValueModifier{}},
+										Required: true,
 									},
 									"origin_read_timeout": schema.Int32Attribute{
-										Optional:      true,
-										Computed:      true,
-										Default:       int32default.StaticInt32(defaultOriginReadTimeout),
-										PlanModifiers: []planmodifier.Int32{useConfigValueModifier{}},
+										Required: true,
 									},
 									"origin_protocol_policy": schema.StringAttribute{
 										Required:   true,
@@ -517,7 +489,7 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 										Required: true,
 									},
 									"origin_shield_region": schema.StringAttribute{
-										Optional: true,
+										Required: true,
 									},
 								},
 							},
@@ -528,16 +500,10 @@ func (r *multiTenantDistributionResource) Schema(ctx context.Context, request re
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
 									"origin_keepalive_timeout": schema.Int32Attribute{
-										Optional:      true,
-										Computed:      true,
-										Default:       int32default.StaticInt32(defaultOriginKeepaliveTimeout),
-										PlanModifiers: []planmodifier.Int32{useConfigValueModifier{}},
+										Required: true,
 									},
 									"origin_read_timeout": schema.Int32Attribute{
-										Optional:      true,
-										Computed:      true,
-										Default:       int32default.StaticInt32(defaultOriginReadTimeout),
-										PlanModifiers: []planmodifier.Int32{useConfigValueModifier{}},
+										Required: true,
 									},
 									"vpc_origin_id": schema.StringAttribute{
 										Required: true,
@@ -1309,8 +1275,8 @@ type cacheBehaviorModel struct {
 type customErrorResponseModel struct {
 	ErrorCachingMinTTL types.Int64  `tfsdk:"error_caching_min_ttl"`
 	ErrorCode          types.Int64  `tfsdk:"error_code"`
-	ResponseCode       types.String `tfsdk:"response_code"`
-	ResponsePagePath   types.String `tfsdk:"response_page_path"`
+	ResponseCode       types.String `tfsdk:"response_code" autoflex:",omitempty"`
+	ResponsePagePath   types.String `tfsdk:"response_page_path" autoflex:",omitempty"`
 }
 
 type restrictionsModel struct {
@@ -1408,32 +1374,5 @@ func fixCustomErrorResponses(customErrorResponses *awstypes.CustomErrorResponses
 		if item.ResponsePagePath == nil {
 			item.ResponsePagePath = aws.String("")
 		}
-	}
-}
-
-// useConfigValueModifier is a plan modifier for Int32 attributes inside Set nested blocks.
-// It ensures the plan uses the config value instead of the schema default when Terraform's
-// Set element matching fails to correlate config and state elements, which causes
-// Optional+Computed+Default attributes to receive schema defaults instead of config values.
-type useConfigValueModifier struct{}
-
-func (m useConfigValueModifier) Description(_ context.Context) string {
-	return "Use configuration value to prevent Set block element matching from overriding with schema defaults."
-}
-
-func (m useConfigValueModifier) MarkdownDescription(ctx context.Context) string {
-	return m.Description(ctx)
-}
-
-func (m useConfigValueModifier) PlanModifyInt32(_ context.Context, req planmodifier.Int32Request, resp *planmodifier.Int32Response) {
-	// Only act when config has an explicit value that differs from the plan
-	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
-		return
-	}
-	if req.PlanValue.IsNull() || req.PlanValue.IsUnknown() {
-		return
-	}
-	if req.PlanValue.ValueInt32() != req.ConfigValue.ValueInt32() {
-		resp.PlanValue = req.ConfigValue
 	}
 }
